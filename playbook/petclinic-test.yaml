@@ -1,0 +1,93 @@
+- hosts: 127.0.0.1
+  connection: local
+  become: yes
+  
+  vars:
+    package_name: maven
+
+     
+  tasks:
+
+    - name: install maven
+      apt:
+       name: "{{ package_name }}"
+       state: latest
+       update_cache: yes
+
+    - name: Clone A Github Repository With Ansible
+      git:
+        repo:  https://github.com/amolshete/spring-petclinic.git
+        dest: /root/spring-petclinic
+        clone: yes
+        update: yes
+
+
+    - name: Remove previous tarFile
+      file:
+        path: /root/spring-petclinic/target.tar.gz
+        state: absent
+
+    - name: Build mvn package
+      ansible.builtin.shell:
+          cmd: mvn install
+          chdir: /root/spring-petclinic
+    
+    - name: Create a tar file for application
+      archive:
+        path: /root/spring-petclinic/target
+        format: gz
+        dest: /root/spring-petclinic/target.tar.gz
+
+
+- hosts: webserver
+  remote_user: ubuntu
+  become_user: root
+  become_method: sudo
+  become: yes
+
+  vars:
+    package_name: apache2
+
+
+  tasks:
+    - name: check apache and if not present then install
+      apt:
+       name: "{{ package_name }}"
+       state: latest
+       update_cache: yes    
+
+    - name: Install java
+      apt:
+       name: openjdk-8-jdk
+       update_cache: yes
+
+    - name: Remove previous tarFile
+      file: 
+        path: /root/spring-petclinic/target.tar.gz
+        state: absent
+
+    - name: copy files to remote host
+      copy:
+        src: "/root/spring-petclinic/target.tar.gz"
+        dest: "/var/www"
+          
+
+    - name: untar all the files in tar.gz
+      unarchive: 
+        src: /root/spring-petclinic/target.tar.gz
+        dest: /var/www
+
+    - name: Get running processes list from remote host
+      ignore_errors: yes
+      shell: "ps -few | grep petclinic |grep -v grep| awk '{print $2}'"
+      register: running_processes
+ 
+    - name: Kill running processes
+      ignore_errors: yes
+      shell: "/usr/bin/kill {{ item }}"
+      with_items: "{{ running_processes.stdout_lines }}"
+
+    - name: Execute jar file on remote server
+      ansible.builtin.shell:
+       cmd: java -jar /var/www/target/spring-petclinic-2.7.0-SNAPSHOT.jar &
+

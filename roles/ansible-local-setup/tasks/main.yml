@@ -1,0 +1,33 @@
+---
+# tasks file for ansible-local-setup
+
+    - name: install maven
+      apt:
+       name: "{{ package_name }}"
+       state: latest
+       update_cache: yes
+
+    - name: Clone A Github Repository With Ansible
+      git:
+        repo:  https://github.com/amolshete/spring-petclinic.git
+        dest: /root/spring-petclinic
+        clone: yes
+        update: yes
+
+
+    - name: Remove previous tarFile
+      file:
+        path: /root/spring-petclinic/target.tar.gz
+        state: absent
+
+    - name: Build mvn package
+      ansible.builtin.shell:
+          cmd: mvn install
+          chdir: /root/spring-petclinic
+
+    - name: Create a tar file for application
+      archive:
+        path: /root/spring-petclinic/target
+        format: gz
+        dest: /root/spring-petclinic/target.tar.gz
+

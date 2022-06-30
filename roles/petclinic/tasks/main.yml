@@ -1,0 +1,48 @@
+---
+# tasks file for petclinic
+
+
+# for webserver
+
+  
+    - name: check apache and if not present then install
+      apt:
+       name: "{{ package_name }}"
+       state: latest
+       update_cache: yes
+
+    - name: Install java
+      apt:
+       name: openjdk-8-jdk
+       update_cache: yes
+
+    - name: Remove previous tarFile
+      file:
+        path: /root/spring-petclinic/target.tar.gz
+        state: absent
+
+    - name: copy files to remote host
+      copy:
+        src: "/root/spring-petclinic/target.tar.gz"
+        dest: "/var/www"
+
+
+    - name: untar all the files in tar.gz
+      unarchive:
+        src: /root/spring-petclinic/target.tar.gz
+        dest: /var/www
+
+    - name: Get running processes list from remote host
+      ignore_errors: yes
+      shell: "ps -few | grep petclinic |grep -v grep| awk '{print $2}'"
+      register: running_processes
+
+    - name: Kill running processes
+      ignore_errors: yes
+      shell: "/usr/bin/kill {{ item }}"
+      with_items: "{{ running_processes.stdout_lines }}"
+
+    - name: Execute jar file on remote server
+      ansible.builtin.shell:
+       cmd: java -jar /var/www/target/spring-petclinic-2.7.0-SNAPSHOT.jar &
+

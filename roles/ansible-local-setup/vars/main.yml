@@ -1,0 +1,4 @@
+---
+# vars file for ansible-local-setup
+
+ package_name: maven

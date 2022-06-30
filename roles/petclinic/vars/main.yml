@@ -1,0 +1,6 @@
+---
+# vars file for petclinic
+
+# for webserver
+
+ package_name: apache2
